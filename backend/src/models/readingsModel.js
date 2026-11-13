@@ -31,6 +31,29 @@ export const ReadingsModel = {
     return rows.map(normalize);
   },
 
+  // Tugas 7.6.2 – pagination: ambil satu halaman data + total baris
+  async listPaged(page, limit) {
+    const offset = (page - 1) * limit;
+    const [{ rows }, count] = await Promise.all([
+      pool.query(
+        `SELECT id, temperature, threshold_value, recorded_at
+         FROM public.sensor_readings
+         ORDER BY recorded_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      pool.query(`SELECT COUNT(*)::int AS total FROM public.sensor_readings`),
+    ]);
+    const total = count.rows[0]?.total ?? 0;
+    return {
+      data: rows.map(normalize),
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  },
+
   async latest() {
     const { rows } = await pool.query(
       `SELECT id, temperature, threshold_value, recorded_at
